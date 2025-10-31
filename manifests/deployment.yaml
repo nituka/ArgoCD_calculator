@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: calculator
-        image: 
+        image: 109903592283.dkr.ecr.ap-south-1.amazonaws.com/python-calculator:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
