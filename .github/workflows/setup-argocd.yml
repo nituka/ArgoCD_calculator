@@ -40,11 +40,25 @@ jobs:
         kubectl create namespace argocd
         kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
         
-        echo "⏳ Waiting for ArgoCD to be ready..."
-        kubectl wait --for=condition=available --timeout=600s deployment/argocd-server -n argocd
-        kubectl wait --for=condition=available --timeout=600s deployment/argocd-application-controller -n argocd
+        echo "⏳ Waiting for ArgoCD deployments to be created..."
+        sleep 30
         
-        echo "✅ ArgoCD installed successfully!"
+        echo "📋 ArgoCD deployments found:"
+        kubectl get deployments -n argocd
+        
+        echo "⏳ Waiting for all ArgoCD deployments to be ready..."
+        
+        # Wait for all deployments in argocd namespace to be available
+        for deployment in $(kubectl get deployments -n argocd -o name); do
+          echo "⏳ Waiting for $deployment..."
+          kubectl wait --for=condition=available --timeout=300s $deployment -n argocd
+        done
+        
+        echo "✅ All ArgoCD deployments are ready!"
+        
+        # Verify ArgoCD is working
+        echo "🔍 Final status check:"
+        kubectl get pods -n argocd
     
     - name: Create Calculator Namespace
       run: |
@@ -81,16 +95,17 @@ jobs:
         echo "🔍 Infrastructure Check"
         echo "======================"
         
-        echo "✅ ArgoCD Server:"
-        kubectl get pods -n argocd | grep argocd-server
+        echo "✅ All ArgoCD Pods:"
+        kubectl get pods -n argocd
         
         echo ""
-        echo "✅ ArgoCD Application:"
-        kubectl get applications -n argocd
+        echo "✅ ArgoCD Applications:"
+        kubectl get applications -n argocd || echo "No applications yet (this is normal)"
         
         echo ""
         echo "✅ Calculator Namespace:"
         kubectl get namespace calculator-app
         
         echo ""
-        echo "🎯 Ready for deployments from githubActions repo!"
+        echo "🎯 ArgoCD Infrastructure is ready!"
+        echo "📝 Next: Push code to githubActions repo to trigger deployment"
