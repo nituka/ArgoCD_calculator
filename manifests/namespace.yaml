@@ -1,0 +1,8 @@
+# Calculator App Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: calculator-app
+  labels:
+    app: python-calculator
+    managed-by: argocd

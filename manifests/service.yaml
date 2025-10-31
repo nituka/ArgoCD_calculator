@@ -1,0 +1,17 @@
+# Production Service Configuration
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-calculator-service
+  namespace: calculator-app
+  labels:
+    app: python-calculator
+spec:
+  selector:
+    app: python-calculator
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+      protocol: TCP
+  type: ClusterIP

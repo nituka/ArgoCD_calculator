@@ -1,0 +1,48 @@
+# Production Deployment Configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-calculator
+  namespace: calculator-app
+spec:
+  replicas: 3  # Production replicas
+  selector:
+    matchLabels:
+      app: python-calculator
+  template:
+    metadata:
+      labels:
+        app: python-calculator
+    spec:
+      containers:
+      - name: calculator
+        image: 109903592283.dkr.ecr.ap-south-1.amazonaws.com/python-calculator:latest  # GitHub Actions will update this
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: PORT
+          value: "5000"
+        - name: ENVIRONMENT
+          value: "production"
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        # Resource limits for production
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

@@ -1,0 +1,27 @@
+# ArgoCD Application - Simple Production Setup
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-calculator
+  namespace: argocd
+spec:
+  project: default
+  
+  # Source: ArgoCD config repository (NOT source code repo)
+  source:
+    repoURL: https://github.com/nituka/ArgoCD_calculator
+    targetRevision: HEAD
+    path: manifests  # Folder with production Kubernetes files
+  
+  # Destination: Where to deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: calculator-app
+  
+  # Auto-sync when config changes
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
