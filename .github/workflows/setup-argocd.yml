@@ -1,0 +1,96 @@
+# ArgoCD Infrastructure Setup
+name: Setup ArgoCD Infrastructure
+
+on:
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'install'
+        type: choice
+        options:
+        - install
+        - destroy
+  push:
+    branches: [ main ]
+    paths:
+      - 'manifests/**'
+      - 'applications/**'
+
+env:
+  CLUSTER_NAME: calculator-argocd
+
+jobs:
+  setup-argocd:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout ArgoCD Config
+      uses: actions/checkout@v4
+    
+    - name: Setup Kind Cluster
+      uses: helm/kind-action@v1.8.0
+      with:
+        cluster_name: ${{ env.CLUSTER_NAME }}
+        wait: 300s
+    
+    - name: Install ArgoCD
+      run: |
+        echo "🎯 Installing ArgoCD..."
+        kubectl create namespace argocd
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        
+        echo "⏳ Waiting for ArgoCD to be ready..."
+        kubectl wait --for=condition=available --timeout=600s deployment/argocd-server -n argocd
+        kubectl wait --for=condition=available --timeout=600s deployment/argocd-application-controller -n argocd
+        
+        echo "✅ ArgoCD installed successfully!"
+    
+    - name: Create Calculator Namespace
+      run: |
+        echo "📁 Creating calculator-app namespace..."
+        kubectl apply -f manifests/namespace.yaml
+    
+    - name: Setup ArgoCD Application
+      run: |
+        echo "🎯 Creating ArgoCD application..."
+        kubectl apply -f applications/python-calculator-app.yaml
+        echo "✅ ArgoCD application created!"
+    
+    - name: Get ArgoCD Access Details
+      run: |
+        echo "🔑 Getting ArgoCD access details..."
+        
+        # Get admin password
+        ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
+        
+        echo ""
+        echo "🎉 ARGOCD INFRASTRUCTURE READY!"
+        echo "==============================="
+        echo "🌐 ArgoCD UI: https://localhost:8080"
+        echo "👤 Username: admin"
+        echo "🔑 Password: $ARGOCD_PASSWORD"
+        echo ""
+        echo "🚀 To access ArgoCD:"
+        echo "   kubectl port-forward svc/argocd-server -n argocd 8080:443"
+        echo ""
+        echo "📱 Your Calculator App will appear when image is pushed from githubActions repo"
+    
+    - name: Simple ArgoCD Verification
+      run: |
+        echo "🔍 Infrastructure Check"
+        echo "======================"
+        
+        echo "✅ ArgoCD Server:"
+        kubectl get pods -n argocd | grep argocd-server
+        
+        echo ""
+        echo "✅ ArgoCD Application:"
+        kubectl get applications -n argocd
+        
+        echo ""
+        echo "✅ Calculator Namespace:"
+        kubectl get namespace calculator-app
+        
+        echo ""
+        echo "🎯 Ready for deployments from githubActions repo!"
